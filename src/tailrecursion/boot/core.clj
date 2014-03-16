@@ -10,11 +10,10 @@
 (ns tailrecursion.boot.core
   "The boot core API."
   (:require
-   [cemerick.pomegranate           :as pom]
+   [classlojure.core               :as cl]
    [clojure.java.io                :as io]
    [clojure.set                    :as set]
    [clojure.walk                   :as walk]
-   [tailrecursion.boot.deps        :as deps]
    [tailrecursion.boot.file        :as file]
    [tailrecursion.boot.gitignore   :as git]
    [tailrecursion.boot.tmpregistry :as tmp])
@@ -22,7 +21,7 @@
    [java.net URLClassLoader URL]
    java.lang.management.ManagementFactory))
 
-(declare boot-env on-env! merge-env! out-files)
+(declare get-env set-env! boot-env on-env! merge-env! out-files)
 
 ;; ## Utility Functions
 ;;
@@ -33,6 +32,10 @@
   []
   (get-in @boot-env [:system :tmpregistry]))
 
+(defn- get-deps []
+  (require 'tailrecursion.boot.deps)
+  (resolve 'tailrecursion.boot.deps/deps))
+
 (defn- add-dependencies!
   "Add Maven dependencies to the classpath, fetching them if necessary."
   [deps repos]
@@ -40,7 +43,7 @@
   ((resolve 'tailrecursion.boot.loader/add-dependencies!) deps repos))
 
 (defn- add-directories!
-  "Add directories to the classpath."
+  "Add URLs (directories or JAR files) to the classpath."
   [dirs]
   (when (seq dirs)
     (let [meth  (doto (.getDeclaredMethod URLClassLoader "addURL" (into-array Class [URL]))
@@ -285,7 +288,7 @@
 (defn deps
   "Returns (FIXME: what exactly does this return?)"
   []
-  (deps/deps boot-env))
+  ((get-deps) boot-env))
 
 (defmacro deftask
   "Define a new task. Task definitions may contain nested task definitions.
